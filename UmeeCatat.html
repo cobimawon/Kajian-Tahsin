@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Umee!Catat</title>
+
+<!-- ══ PWA META TAGS ══ -->
+<meta name="theme-color" content="#1a4a2e" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Umee!Catat" />
+<meta name="description" content="Aplikasi Pencatatan Keuangan Umee!Catat" />
+<link rel="manifest" id="pwa-manifest" />
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green-dark: #1a4a2e;
+    --green-mid:  #2d6a4f;
+    --green-light:#52b788;
+    --gold:       #c9a84c;
+    --gold-light: #f0d080;
+    --red:        #c0392b;
+    --blue-dark:  #1a3a5c;
+    --bg:         #f0f7f4;
+    --white:      #ffffff;
+    --border:     #d0e8d8;
+    --text:       #2c2c2c;
+    --text-muted: #666;
+    --shadow:     0 4px 24px rgba(26,74,46,.12);
+  }
+
+  body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* ── HEADER ── */
+  header {
+    background: linear-gradient(135deg, #0f2d1c 0%, #1a4a2e 40%, #1e3a5a 100%);
+    box-shadow: 0 4px 32px rgba(0,0,0,.3);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header-inner {
+    max-width: 1120px; margin: 0 auto; padding: .9rem 1.5rem;
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem;
+  }
+  .logo { display: flex; align-items: center; gap: .9rem; cursor: default; }
+  .logo-icon {
+    width: 48px; height: 48px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--gold), #8b6914);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.6rem; box-shadow: 0 2px 12px rgba(201,168,76,.4);
+    flex-shrink: 0; overflow: hidden;
+  }
+  .logo-icon img { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; }
+  .logo-name { font-family: 'Amiri', serif; font-size: 1.15rem; font-weight: 700; color: #fff; line-height: 1.2; }
+  .logo-sub  { font-size: .72rem; color: rgba(255,255,255,.55); letter-spacing: .06em; text-transform: uppercase; margin-top: 2px; }
+
+  .header-btns { display: flex; gap: .5rem; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: .35rem;
+    padding: .48rem 1rem; border-radius: 8px; border: none;
+    font-family: 'Plus Jakarta Sans', sans-serif; font-size: .82rem; font-weight: 700;
+    cursor: pointer; transition: filter .15s, transform .1s;
+  }
+  .btn:hover  { filter: brightness(1.1); }
+  .btn:active { transform: scale(.97); }
+  .btn-wa     { background: #25d366; color: #fff; }
+  .btn-xl     { background: rgba(255,255,255,.13); color: #fff; border: 1px solid rgba(255,255,255,.25); }
+  .btn-pdf    { background: #e74c3c; color: #fff; }
+  .btn-add    { background: var(--gold); color: #1a2e0a; font-size: .88rem; }
+  .btn-add span { font-size: 1.2rem; line-height: 1; }
+  .btn-settings {
+    background: rgba(255,255,255,.08); color: rgba(255,255,255,.75);
+    border: 1px solid rgba(255,255,255,.18); padding: .48rem .7rem; font-size: 1rem;
+  }
+  .btn-settings:hover { background: rgba(255,255,255,.18); color: #fff; }
+
+  /* ── CARDS ── */
+  .cards {
+    max-width: 1120px; margin: 1.4rem auto 0; padding: 0 1.5rem;
+    display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem;
+  }
+  .card { border-radius: 14px; padding: 1.1rem 1.4rem; position: relative; overflow: hidden; box-shadow: var(--shadow); }
+  .card-masuk  { background: linear-gradient(135deg,#d8f3e3,#b7e4c7); }
+  .card-saldo  { background: linear-gradient(135deg,#1a4a7a,#2d6a9f); }
+  .card-keluar { background: linear-gradient(135deg,#fde8e8,#f9c0c0); }
+  .card-label  { font-size: .7rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: .65; margin-bottom: 4px; }
+  .card-saldo .card-label { color: rgba(255,255,255,.8); }
+  .card-value  { font-size: 1.1rem; font-weight: 800; }
+  .card-saldo .card-value { color: #fff; }
+  .card-icon   { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-size: 2.2rem; opacity: .12; font-weight: 900; }
+
+  /* ── TABLE ── */
+  .table-section { max-width: 1120px; margin: 1.4rem auto 2.5rem; padding: 0 1.5rem; }
+  .table-top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .5rem; margin-bottom: .75rem; }
+  .table-title { font-weight: 800; font-size: 1.05rem; color: var(--green-dark); }
+  .search-wrap { position: relative; }
+  .search-wrap svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 15px; opacity: .45; }
+  #searchInput {
+    border: 1.5px solid var(--border); border-radius: 8px;
+    padding: .42rem .75rem .42rem 2rem; font-family: inherit; font-size: .85rem;
+    outline: none; background: #fff; width: 220px; transition: border-color .2s;
+  }
+  #searchInput:focus { border-color: var(--green-mid); }
+  .table-wrap { overflow-x: auto; border-radius: 14px; box-shadow: var(--shadow); background: #fff; }
+  table { width: 100%; border-collapse: collapse; font-size: .84rem; }
+  thead th {
+    background: var(--green-mid); color: #fff; padding: .72rem .8rem;
+    font-weight: 700; font-size: .78rem; letter-spacing: .03em; text-transform: uppercase;
+    border-bottom: 2px solid var(--green-dark);
+  }
+  thead th.l { text-align: left; }
+  thead th.r { text-align: right; }
+  thead th.c { text-align: center; }
+  tbody tr:nth-child(even) { background: #f6fcf8; }
+  tbody tr:hover { background: #e8f5ed; }
+  td { padding: .58rem .8rem; border-bottom: 1px solid #e8f4ed; vertical-align: middle; }
+  td.c { text-align: center; } td.l { text-align: left; } td.r { text-align: right; }
+  td.masuk  { color: #1a6a40; font-weight: 600; }
+  td.keluar { color: var(--red); font-weight: 600; }
+  td.saldo  { font-weight: 800; color: var(--blue-dark); }
+  td.saldo.minus { color: var(--red); }
+  tfoot td { background: var(--green-dark); color: #fff; font-weight: 700; padding: .72rem .8rem; font-size: .82rem; }
+  tfoot td.total-label  { text-align: right; }
+  tfoot td.total-keluar { text-align: right; color: #ffb3b3; }
+  tfoot td.total-masuk  { text-align: right; color: #b3ffd6; }
+  tfoot td.total-saldo  { text-align: right; color: var(--gold-light); font-size: .9rem; }
+  .empty-row td { text-align: center; padding: 3rem; color: var(--text-muted); font-style: italic; }
+  .btn-icon { background: none; border: none; cursor: pointer; padding: 2px 4px; font-size: 1rem; border-radius: 5px; transition: background .15s; }
+  .btn-icon:hover { background: #e0efe8; }
+
+  /* ── MODAL BASE ── */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(5,20,12,.55); backdrop-filter: blur(5px);
+    display: none; align-items: center; justify-content: center;
+    z-index: 500; padding: 1rem;
+  }
+  .overlay.show { display: flex; }
+  .modal {
+    background: #fff; border-radius: 18px; width: 100%; max-width: 460px;
+    box-shadow: 0 24px 60px rgba(0,0,0,.28); overflow: hidden;
+    animation: slideUp .22s ease;
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .modal-head {
+    background: linear-gradient(135deg, var(--green-dark), var(--green-mid));
+    color: #fff; padding: 1rem 1.4rem;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .modal-title { font-weight: 800; font-size: 1rem; font-family: 'Amiri', serif; }
+  .btn-close { background: none; border: none; color: #fff; font-size: 1.3rem; cursor: pointer; line-height: 1; opacity: .8; }
+  .btn-close:hover { opacity: 1; }
+  .modal-body { padding: 1.1rem 1.4rem .4rem; }
+  .form-group { margin-bottom: .85rem; }
+  label.fl { display: block; font-size: .72rem; font-weight: 700; color: var(--text-muted); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 5px; }
+  .inp {
+    width: 100%; border: 1.5px solid var(--border); border-radius: 8px;
+    padding: .52rem .8rem; font-family: inherit; font-size: .9rem; outline: none;
+    transition: border-color .2s;
+  }
+  .inp:focus { border-color: var(--green-mid); }
+  .type-toggle { display: flex; gap: .5rem; }
+  .type-btn {
+    flex: 1; padding: .52rem; border: 1.5px solid #ddd; border-radius: 8px;
+    background: #f5f5f5; color: #666; cursor: pointer; font-weight: 700;
+    font-size: .82rem; font-family: inherit; transition: all .15s;
+  }
+  .type-btn.active-masuk  { background: #d8f3e3; border-color: var(--green-mid); color: var(--green-dark); }
+  .type-btn.active-keluar { background: #fde8e8; border-color: var(--red); color: var(--red); }
+  .modal-foot { display: flex; justify-content: flex-end; gap: .6rem; padding: .9rem 1.4rem; border-top: 1px solid #eee; }
+  .btn-cancel { padding: .52rem 1.1rem; border: 1.5px solid #ccc; border-radius: 8px; background: #fff; cursor: pointer; font-family: inherit; font-weight: 700; font-size: .85rem; }
+  .btn-save   { padding: .52rem 1.3rem; border: none; border-radius: 8px; background: var(--green-mid); color: #fff; cursor: pointer; font-family: inherit; font-weight: 800; font-size: .85rem; }
+  .btn-delete { background: var(--red); }
+
+  /* ── SETTINGS MODAL ── */
+  .settings-modal { max-width: 500px; }
+
+  .logo-upload-area {
+    border: 2px dashed var(--border); border-radius: 12px;
+    padding: 1.2rem; text-align: center; cursor: pointer;
+    transition: border-color .2s, background .2s; position: relative;
+    background: #fafffe;
+  }
+  .logo-upload-area:hover, .logo-upload-area.drag-over {
+    border-color: var(--green-mid); background: #f0faf5;
+  }
+  .logo-upload-area input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .logo-preview-wrap {
+    display: flex; align-items: center; gap: 1rem;
+    border: 1.5px solid var(--border); border-radius: 12px;
+    padding: .75rem 1rem; background: #fafffe;
+  }
+  .logo-preview-box {
+    width: 56px; height: 56px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--gold), #8b6914);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.8rem; flex-shrink: 0; overflow: hidden;
+    box-shadow: 0 2px 8px rgba(201,168,76,.35);
+  }
+  .logo-preview-box img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
+  .logo-preview-info { flex: 1; min-width: 0; }
+  .logo-preview-name { font-weight: 700; font-size: .88rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .logo-preview-size { font-size: .75rem; color: var(--text-muted); margin-top: 2px; }
+  .logo-preview-actions { display: flex; gap: .4rem; margin-top: .5rem; }
+  .btn-change-logo {
+    font-size: .75rem; padding: .28rem .65rem; border-radius: 6px;
+    border: 1.5px solid var(--green-mid); background: #fff; color: var(--green-mid);
+    cursor: pointer; font-weight: 700; font-family: inherit; transition: all .15s;
+  }
+  .btn-change-logo:hover { background: var(--green-mid); color: #fff; }
+  .btn-remove-logo {
+    font-size: .75rem; padding: .28rem .65rem; border-radius: 6px;
+    border: 1.5px solid #ddd; background: #fff; color: #888;
+    cursor: pointer; font-weight: 700; font-family: inherit; transition: all .15s;
+    position: relative;
+  }
+  .btn-remove-logo:hover { border-color: var(--red); color: var(--red); }
+  .btn-remove-logo input[type=file] { display: none; }
+  .upload-icon { font-size: 2rem; margin-bottom: .4rem; opacity: .5; }
+  .upload-hint { font-size: .8rem; color: var(--text-muted); line-height: 1.5; }
+  .upload-hint strong { color: var(--green-mid); }
+
+  .settings-preview {
+    background: linear-gradient(135deg, #0f2d1c, #1a4a2e, #1e3a5a);
+    border-radius: 12px; padding: .8rem 1rem;
+    display: flex; align-items: center; gap: .75rem;
+    margin-top: .5rem;
+  }
+  .sp-icon {
+    width: 40px; height: 40px; border-radius: 9px;
+    background: linear-gradient(135deg, var(--gold), #8b6914);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; flex-shrink: 0; overflow: hidden;
+  }
+  .sp-icon img { width: 100%; height: 100%; object-fit: cover; border-radius: 9px; }
+  .sp-name { font-family: 'Amiri', serif; font-size: 1rem; font-weight: 700; color: #fff; line-height: 1.2; }
+  .sp-sub  { font-size: .65rem; color: rgba(255,255,255,.5); letter-spacing: .06em; text-transform: uppercase; }
+
+  .section-divider { height: 1px; background: #eee; margin: .4rem 0 .9rem; }
+  .section-label {
+    font-size: .7rem; font-weight: 800; color: var(--green-mid);
+    letter-spacing: .1em; text-transform: uppercase; margin-bottom: .6rem;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center; padding: 1.2rem 1.5rem; font-size: .75rem;
+    color: var(--text-muted); letter-spacing: .04em;
+    border-top: 1px solid var(--border); margin-top: .5rem;
+  }
+  footer .footer-brand {
+    font-weight: 800; color: var(--green-mid);
+    font-family: 'Amiri', serif; font-size: .85rem; letter-spacing: .06em;
+  }
+  footer .footer-version {
+    display: inline-block; background: var(--green-dark); color: var(--gold-light);
+    font-size: .65rem; font-weight: 700; padding: 1px 7px; border-radius: 20px;
+    margin-left: 4px; vertical-align: middle; letter-spacing: .05em;
+  }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+    background: var(--green-mid); color: #fff;
+    padding: .7rem 1.3rem; border-radius: 10px;
+    font-weight: 700; font-size: .88rem;
+    box-shadow: 0 6px 24px rgba(0,0,0,.2);
+    opacity: 0; transform: translateY(12px);
+    transition: opacity .25s, transform .25s;
+    pointer-events: none;
+  }
+  #toast.show { opacity: 1; transform: translateY(0); }
+  #toast.err  { background: var(--red); }
+
+  /* ── PWA INSTALL BANNER ── */
+  #installBanner {
+    display: none;
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 800;
+    background: linear-gradient(135deg, #0f2d1c, #1a4a2e);
+    color: #fff; padding: .9rem 1.5rem;
+    align-items: center; justify-content: space-between; gap: 1rem;
+    box-shadow: 0 -4px 20px rgba(0,0,0,.25);
+  }
+  #installBanner.show { display: flex; }
+  .install-info { display: flex; align-items: center; gap: .75rem; }
+  .install-icon {
+    width: 42px; height: 42px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--gold), #8b6914);
+    display: flex; align-items: center; justify-content: center; font-size: 1.4rem; flex-shrink: 0;
+  }
+  .install-text { font-size: .85rem; line-height: 1.4; }
+  .install-text strong { display: block; font-size: .95rem; }
+  .install-actions { display: flex; gap: .5rem; flex-shrink: 0; }
+  .btn-install {
+    background: var(--gold); color: #1a2e0a; border: none;
+    padding: .5rem 1.1rem; border-radius: 8px;
+    font-family: inherit; font-weight: 800; font-size: .82rem; cursor: pointer;
+  }
+  .btn-install-dismiss {
+    background: rgba(255,255,255,.1); color: rgba(255,255,255,.7);
+    border: 1px solid rgba(255,255,255,.2);
+    padding: .5rem .9rem; border-radius: 8px;
+    font-family: inherit; font-weight: 700; font-size: .82rem; cursor: pointer;
+  }
+
+  /* ── ONBOARDING SCREEN ── */
+  #onboardingOverlay {
+    position: fixed; inset: 0; z-index: 2000;
+    background: linear-gradient(160deg, #0b1f12 0%, #1a4a2e 45%, #132540 100%);
+    display: none; align-items: center; justify-content: center;
+    padding: 1.5rem;
+    transition: opacity .4s ease;
+  }
+  #onboardingOverlay.show { display: flex; }
+  #onboardingOverlay.fade-out { opacity: 0; pointer-events: none; }
+
+  .ob-card {
+    background: rgba(255,255,255,.04); backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 24px; width: 100%; max-width: 440px;
+    padding: 2.4rem 2rem 2rem;
+    box-shadow: 0 32px 80px rgba(0,0,0,.4);
+    animation: slideUp .4s cubic-bezier(.22,1,.36,1);
+    text-align: center;
+  }
+  .ob-logo-wrap {
+    width: 72px; height: 72px; border-radius: 18px;
+    background: linear-gradient(135deg, var(--gold), #8b6914);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2.2rem; margin: 0 auto 1.1rem;
+    box-shadow: 0 8px 28px rgba(201,168,76,.4);
+  }
+  .ob-app-name {
+    font-family: 'Amiri', serif; font-size: 2rem; font-weight: 700;
+    color: #fff; margin-bottom: .15rem; letter-spacing: .02em;
+  }
+  .ob-app-name span { color: var(--gold); }
+  .ob-version {
+    display: inline-block; background: rgba(201,168,76,.2);
+    color: var(--gold-light); font-size: .68rem; font-weight: 700;
+    padding: 2px 10px; border-radius: 20px; letter-spacing: .08em;
+    margin-bottom: 1.6rem; border: 1px solid rgba(201,168,76,.3);
+  }
+  .ob-welcome {
+    font-size: .85rem; color: rgba(255,255,255,.6);
+    margin-bottom: 1.6rem; line-height: 1.6;
+  }
+  .ob-form { text-align: left; }
+  .ob-label {
+    display: block; font-size: .7rem; font-weight: 700;
+    color: rgba(255,255,255,.5); letter-spacing: .1em;
+    text-transform: uppercase; margin-bottom: 6px;
+  }
+  .ob-input {
+    width: 100%; background: rgba(255,255,255,.08);
+    border: 1.5px solid rgba(255,255,255,.15); border-radius: 10px;
+    padding: .65rem .9rem; color: #fff; font-family: inherit; font-size: .95rem;
+    outline: none; transition: border-color .2s, background .2s;
+    margin-bottom: 1rem;
+  }
+  .ob-input::placeholder { color: rgba(255,255,255,.3); }
+  .ob-input:focus { border-color: var(--gold); background: rgba(255,255,255,.12); }
+  .ob-btn {
+    width: 100%; background: linear-gradient(135deg, var(--gold), #a87820);
+    color: #1a2e0a; border: none; border-radius: 12px;
+    padding: .8rem; font-family: inherit; font-weight: 800;
+    font-size: 1rem; cursor: pointer; margin-top: .4rem;
+    transition: filter .15s, transform .1s;
+    box-shadow: 0 6px 20px rgba(201,168,76,.35);
+  }
+  .ob-btn:hover  { filter: brightness(1.08); }
+  .ob-btn:active { transform: scale(.98); }
+  .ob-divider {
+    height: 1px; background: rgba(255,255,255,.1);
+    margin: 1.5rem 0 1.1rem;
+  }
+  .ob-footer-note {
+    font-size: .72rem; color: rgba(255,255,255,.35);
+    line-height: 1.5; text-align: center;
+  }
+
+  @media (max-width: 640px) {
+    .cards { grid-template-columns: 1fr; }
+    .card-value { font-size: .95rem; }
+    #searchInput { width: 160px; }
+    .ob-card { padding: 1.8rem 1.4rem 1.6rem; }
+    .ob-app-name { font-size: 1.7rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ ONBOARDING SCREEN ══ -->
+<div id="onboardingOverlay" class="show">
+  <div class="ob-card">
+    <div class="ob-logo-wrap">💰</div>
+    <div class="ob-app-name">Umee<span>!</span>Catat</div>
+    <div class="ob-version">v1.1</div>
+    <p class="ob-welcome">
+      Selamat datang! Sebelum memulai, lengkapi<br>
+      informasi dasar untuk aplikasi Anda.
+    </p>
+
+    <div class="ob-form">
+      <label class="ob-label" for="obName">Nama</label>
+      <input class="ob-input" type="text" id="obName"
+             placeholder="Contoh: Mushola Al-Ikhlas" autocomplete="off" />
+
+      <label class="ob-label" for="obTagline">Tagline</label>
+      <input class="ob-input" type="text" id="obTagline"
+             placeholder="Contoh: Sistem Pencatatan Keuangan"
+             autocomplete="off" />
+
+      <button class="ob-btn" onclick="completeOnboarding()">
+        Mulai Menggunakan →
+      </button>
+    </div>
+
+    <div class="ob-divider"></div>
+    <p class="ob-footer-note">
+      Data tersimpan di perangkat Anda &nbsp;·&nbsp; Umee!Catat v1.1
+    </p>
+  </div>
+</div>
+
+<!-- ══ MAIN APP ══ -->
+
+<!-- HEADER -->
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon" id="headerIcon">💰</div>
+      <div>
+        <div class="logo-name" id="headerName">Umee!Catat</div>
+        <div class="logo-sub"  id="headerSub">Sistem Pencatatan Keuangan</div>
+      </div>
+    </div>
+    <div class="header-btns">
+      <button class="btn btn-settings" onclick="openSettings()" title="Pengaturan">⚙️</button>
+      <button class="btn btn-wa"  onclick="shareWA()">📲 Share WA</button>
+      <button class="btn btn-pdf" onclick="exportPDF()">📄 Share PDF</button>
+      <button class="btn btn-xl"  onclick="exportExcel()">📊 Export Excel</button>
+      <button class="btn btn-add" onclick="openForm()"><span>+</span> Tambah</button>
+    </div>
+  </div>
+</header>
+
+<!-- CARDS -->
+<div class="cards">
+  <div class="card card-masuk">
+    <div class="card-label">Total Pemasukan</div>
+    <div class="card-value" id="cardMasuk">Rp 0</div>
+    <div class="card-icon">↑</div>
+  </div>
+  <div class="card card-saldo">
+    <div class="card-label">Saldo Saat Ini</div>
+    <div class="card-value" id="cardSaldo">Rp 0</div>
+    <div class="card-icon">⚖</div>
+  </div>
+  <div class="card card-keluar">
+    <div class="card-label">Total Pengeluaran</div>
+    <div class="card-value" id="cardKeluar">Rp 0</div>
+    <div class="card-icon">↓</div>
+  </div>
+</div>
+
+<!-- TABLE -->
+<div class="table-section">
+  <div class="table-top">
+    <div class="table-title">Riwayat Transaksi</div>
+    <div class="search-wrap">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.9 14.32a8 8 0 111.41-1.41l4.38 4.38-1.41 1.41-4.38-4.38zm-4.9.18a6 6 0 100-12 6 6 0 000 12z" clip-rule="evenodd"/></svg>
+      <input id="searchInput" type="text" placeholder="Cari transaksi..." oninput="renderTable()" />
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table id="mainTable">
+      <thead>
+        <tr>
+          <th class="c" style="width:46px">No</th>
+          <th class="c" style="width:115px">Tanggal</th>
+          <th class="l">Keterangan</th>
+          <th class="r" style="width:150px">Pengeluaran</th>
+          <th class="r" style="width:150px">Pemasukan</th>
+          <th class="r" style="width:155px">Balance</th>
+          <th class="c" style="width:72px">Aksi</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+      <tfoot id="tableFoot"></tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- ══ MODAL: TAMBAH / EDIT TRANSAKSI ══ -->
+<div class="overlay" id="formOverlay" onclick="overlayClose(event,'formOverlay')">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="formTitle">Tambah Transaksi Baru</div>
+      <button class="btn-close" onclick="closeForm()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="fl">Tanggal</label>
+        <input class="inp" type="date" id="fDate" />
+      </div>
+      <div class="form-group">
+        <label class="fl">Jenis Transaksi</label>
+        <div class="type-toggle">
+          <button class="type-btn active-masuk" id="btnMasuk"  onclick="setType('pemasukan')">✅ Pemasukan</button>
+          <button class="type-btn"              id="btnKeluar" onclick="setType('pengeluaran')">❌ Pengeluaran</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="fl">Keterangan</label>
+        <input class="inp" type="text" id="fKet" placeholder="Contoh: Kotak Amal, Bisyarah Ustadz…" />
+      </div>
+      <div class="form-group">
+        <label class="fl">Nominal (Rp)</label>
+        <input class="inp" type="text" id="fAmt" placeholder="Contoh: 500.000" oninput="formatAmtInput(this)" />
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="closeForm()">Batal</button>
+      <button class="btn-save"   onclick="submitForm()">Tambah Transaksi</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: HAPUS ══ -->
+<div class="overlay" id="delOverlay" onclick="overlayClose(event,'delOverlay')">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-head">
+      <div class="modal-title">Konfirmasi Hapus</div>
+      <button class="btn-close" onclick="closeOverlay('delOverlay')">✕</button>
+    </div>
+    <div style="padding:1.1rem 1.4rem;color:#555;font-size:.9rem;line-height:1.6">
+      Yakin ingin menghapus transaksi ini?<br>Tindakan ini tidak dapat dibatalkan.
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="closeOverlay('delOverlay')">Batal</button>
+      <button class="btn-save btn-delete" onclick="confirmDelete()">Hapus</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: PENGATURAN ══ -->
+<div class="overlay" id="settingsOverlay" onclick="overlayClose(event,'settingsOverlay')">
+  <div class="modal settings-modal">
+    <div class="modal-head">
+      <div class="modal-title">⚙️ &nbsp;Pengaturan</div>
+      <button class="btn-close" onclick="closeOverlay('settingsOverlay')">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- SECTION: IDENTITAS -->
+      <div class="section-label">Identitas</div>
+
+      <div class="form-group">
+        <label class="fl">Nama</label>
+        <input class="inp" type="text" id="sName" placeholder="Contoh: Mushola Al-Ikhlas" />
+      </div>
+      <div class="form-group">
+        <label class="fl">Tagline</label>
+        <input class="inp" type="text" id="sSub" placeholder="Contoh: Sistem Pencatatan Keuangan" />
+      </div>
+
+      <div class="section-divider"></div>
+
+      <!-- SECTION: LOGO -->
+      <div class="section-label">Logo</div>
+
+      <!-- Upload area (shown when no logo) -->
+      <div class="logo-upload-area" id="uploadArea" style="display:none">
+        <input type="file" id="logoFileInput" accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
+               onchange="handleLogoFile(this)" />
+        <div class="upload-icon">🖼️</div>
+        <div class="upload-hint">
+          <strong>Klik untuk pilih file</strong> atau seret ke sini<br>
+          PNG, JPG, WEBP — maks. 2 MB
+        </div>
+      </div>
+
+      <!-- Preview (shown when logo exists) -->
+      <div class="logo-preview-wrap" id="previewWrap" style="display:none">
+        <div class="logo-preview-box" id="previewBox"></div>
+        <div class="logo-preview-info">
+          <div class="logo-preview-name" id="previewName">—</div>
+          <div class="logo-preview-size" id="previewSize"></div>
+          <div class="logo-preview-actions">
+            <label class="btn-change-logo">
+              Ganti Gambar
+              <input type="file" accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
+                     style="display:none" onchange="handleLogoFile(this)" />
+            </label>
+            <button class="btn-remove-logo" onclick="removeLogo()">Hapus Logo</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live preview header -->
+      <div style="margin-top:1rem">
+        <label class="fl" style="margin-bottom:.45rem">Pratinjau Header</label>
+        <div class="settings-preview">
+          <div class="sp-icon" id="spIcon">💰</div>
+          <div>
+            <div class="sp-name" id="spName">Umee!Catat</div>
+            <div class="sp-sub"  id="spSub">Sistem Pencatatan Keuangan</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="closeOverlay('settingsOverlay')">Batal</button>
+      <button class="btn-save"   onclick="saveSettings()">Simpan Pengaturan</button>
+    </div>
+  </div>
+</div>
+
+<!-- PWA INSTALL BANNER -->
+<div id="installBanner">
+  <div class="install-info">
+    <div class="install-icon">💰</div>
+    <div class="install-text">
+      <strong>Install Umee!Catat</strong>
+      Tambahkan ke layar utama untuk akses lebih cepat
+    </div>
+  </div>
+  <div class="install-actions">
+    <button class="btn-install" onclick="installPWA()">Install</button>
+    <button class="btn-install-dismiss" onclick="dismissInstall()">Nanti</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- FOOTER -->
+<footer>
+  <span class="footer-brand">Umee!Catat</span>
+  <span class="footer-version">v1.1</span>
+</footer>
+
+<script>
+// ══ PWA SETUP ══════════════════════════════════════════════════
+
+// Inject PWA manifest dynamically
+(function() {
+  const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+    <rect width="512" height="512" rx="96" fill="#1a4a2e"/>
+    <rect x="64" y="160" width="384" height="256" rx="24" fill="#c9a84c" opacity="0.9"/>
+    <rect x="64" y="200" width="384" height="40" fill="#8b6914" opacity="0.8"/>
+    <circle cx="160" cy="320" r="32" fill="#1a4a2e" opacity="0.7"/>
+    <rect x="240" y="300" width="160" height="16" rx="8" fill="#1a4a2e" opacity="0.5"/>
+    <rect x="240" y="328" width="100" height="12" rx="6" fill="#1a4a2e" opacity="0.3"/>
+    <rect x="128" y="100" width="256" height="80" rx="16" fill="#2d6a4f"/>
+    <text x="256" y="155" font-family="serif" font-size="52" font-weight="bold" text-anchor="middle" fill="#f0d080">Umee!</text>
+  </svg>`;
+  const iconB64 = 'data:image/svg+xml;base64,' + btoa(iconSvg);
+
+  const manifest = {
+    name: 'Umee!Catat',
+    short_name: 'UmeeCatat',
+    description: 'Aplikasi Pencatatan Keuangan Digital',
+    start_url: '.',
+    display: 'standalone',
+    background_color: '#f0f7f4',
+    theme_color: '#1a4a2e',
+    orientation: 'portrait-primary',
+    categories: ['finance', 'productivity'],
+    icons: [
+      { src: iconB64, sizes: '192x192', type: 'image/svg+xml', purpose: 'any' },
+      { src: iconB64, sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable' }
+    ]
+  };
+
+  const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+  const url  = URL.createObjectURL(blob);
+  document.getElementById('pwa-manifest').href = url;
+})();
+
+// Register Service Worker via blob
+if ('serviceWorker' in navigator) {
+  const swCode = `
+    const CACHE = 'umeecatat-v2';
+    const ASSETS = ['.'];
+
+    self.addEventListener('install', e => {
+      e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
+      self.skipWaiting();
+    });
+    self.addEventListener('activate', e => {
+      e.waitUntil(
+        caches.keys().then(keys =>
+          Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+        )
+      );
+      return self.clients.claim();
+    });
+    self.addEventListener('fetch', e => {
+      if (e.request.method !== 'GET') return;
+      e.respondWith(
+        caches.open(CACHE).then(cache =>
+          cache.match(e.request).then(cached => {
+            const fresh = fetch(e.request).then(resp => {
+              if (resp && resp.status === 200)
+                cache.put(e.request, resp.clone());
+              return resp;
+            }).catch(() => cached);
+            return cached || fresh;
+          })
+        )
+      );
+    });
+  `;
+  const swBlob = new Blob([swCode], { type: 'application/javascript' });
+  const swURL  = URL.createObjectURL(swBlob);
+  navigator.serviceWorker.register(swURL).catch(() => {});
+}
+
+// PWA Install prompt
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  if (!localStorage.getItem('pwa_install_dismissed')) {
+    document.getElementById('installBanner').classList.add('show');
+  }
+});
+window.addEventListener('appinstalled', () => {
+  document.getElementById('installBanner').classList.remove('show');
+  deferredPrompt = null;
+  showToast('Umee!Catat berhasil diinstall ✓');
+});
+
+function installPWA() {
+  if (!deferredPrompt) return;
+  document.getElementById('installBanner').classList.remove('show');
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(r => {
+    deferredPrompt = null;
+  });
+}
+function dismissInstall() {
+  localStorage.setItem('pwa_install_dismissed', '1');
+  document.getElementById('installBanner').classList.remove('show');
+}
+
+// ── STATE ──────────────────────────────────────────────────────
+const STORAGE_KEY  = 'umeecatat_transactions_v2';
+const SETTINGS_KEY = 'umeecatat_settings_v2';
+const OB_KEY       = 'umeecatat_onboarding_done';
+
+let transactions = [];
+let editId       = null;
+let deleteId     = null;
+let formType     = 'pemasukan';
+
+let cfg = {
+  name:    '',
+  sub:     'Sistem Pencatatan Keuangan',
+  logoB64: null,
+  logoName:'',
+};
+
+let tempLogo = { b64: null, name: '' };
+
+// ── ONBOARDING ─────────────────────────────────────────────────
+function checkOnboarding() {
+  const done = localStorage.getItem(OB_KEY);
+  const ol   = document.getElementById('onboardingOverlay');
+  if (done) {
+    ol.classList.remove('show');
+    ol.style.display = 'none';
+  } else {
+    ol.classList.add('show');
+    setTimeout(() => document.getElementById('obName').focus(), 300);
+  }
+}
+
+function completeOnboarding() {
+  const name    = document.getElementById('obName').value.trim();
+  const tagline = document.getElementById('obTagline').value.trim();
+
+  if (!name) {
+    document.getElementById('obName').style.borderColor = '#e74c3c';
+    document.getElementById('obName').focus();
+    setTimeout(() => document.getElementById('obName').style.borderColor = '', 1500);
+    return;
+  }
+
+  cfg.name = name;
+  cfg.sub  = tagline || 'Sistem Pencatatan Keuangan';
+  persistSettings();
+  applySettings();
+  localStorage.setItem(OB_KEY, '1');
+
+  const ol = document.getElementById('onboardingOverlay');
+  ol.classList.add('fade-out');
+  setTimeout(() => {
+    ol.classList.remove('show', 'fade-out');
+    ol.style.display = 'none';
+    showToast('Selamat datang di Umee!Catat ✓');
+  }, 420);
+}
+
+// Enter key in onboarding
+document.getElementById('obName').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('obTagline').focus();
+});
+document.getElementById('obTagline').addEventListener('keydown', e => {
+  if (e.key === 'Enter') completeOnboarding();
+});
+
+// ── STORAGE ────────────────────────────────────────────────────
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    transactions = raw ? JSON.parse(raw) : [];
+  } catch { transactions = []; }
+
+  try {
+    const s = localStorage.getItem(SETTINGS_KEY);
+    if (s) cfg = { ...cfg, ...JSON.parse(s) };
+  } catch {}
+
+  applySettings();
+  renderAll();
+  checkOnboarding();
+}
+
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+}
+
+function persistSettings() {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(cfg));
+}
+
+// ── APPLY SETTINGS TO PAGE ─────────────────────────────────────
+function applySettings() {
+  document.title = 'Umee!Catat' + (cfg.name ? ' · ' + cfg.name : '');
+  document.getElementById('headerName').textContent = cfg.name || 'Umee!Catat';
+  document.getElementById('headerSub').textContent  = cfg.sub;
+
+  const icon = document.getElementById('headerIcon');
+  if (cfg.logoB64) {
+    icon.innerHTML = `<img src="${cfg.logoB64}" alt="logo">`;
+  } else {
+    icon.innerHTML = '💰';
+  }
+}
+
+// ── SETTINGS MODAL ─────────────────────────────────────────────
+function openSettings() {
+  document.getElementById('sName').value = cfg.name;
+  document.getElementById('sSub').value  = cfg.sub;
+  tempLogo = { b64: cfg.logoB64, name: cfg.logoName };
+  refreshSettingsPreview();
+  refreshLogoUI();
+  document.getElementById('settingsOverlay').classList.add('show');
+}
+
+function refreshLogoUI() {
+  const uploadArea  = document.getElementById('uploadArea');
+  const previewWrap = document.getElementById('previewWrap');
+  if (tempLogo.b64) {
+    uploadArea.style.display  = 'none';
+    previewWrap.style.display = 'flex';
+    document.getElementById('previewBox').innerHTML = `<img src="${tempLogo.b64}" alt="logo">`;
+    document.getElementById('previewName').textContent = tempLogo.name || 'logo';
+    const bytes = Math.round((tempLogo.b64.length * 3) / 4 / 1024);
+    document.getElementById('previewSize').textContent = bytes + ' KB';
+  } else {
+    uploadArea.style.display  = 'block';
+    previewWrap.style.display = 'none';
+  }
+}
+
+function refreshSettingsPreview() {
+  const name = document.getElementById('sName').value || 'Nama';
+  const sub  = document.getElementById('sSub').value  || 'Tagline';
+  document.getElementById('spName').textContent = name;
+  document.getElementById('spSub').textContent  = sub;
+  const spIcon = document.getElementById('spIcon');
+  if (tempLogo.b64) {
+    spIcon.innerHTML = `<img src="${tempLogo.b64}" alt="logo">`;
+  } else {
+    spIcon.innerHTML = '💰';
+  }
+}
+
+document.addEventListener('input', e => {
+  if (e.target.id === 'sName' || e.target.id === 'sSub') refreshSettingsPreview();
+});
+
+function handleLogoFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) { showToast('Ukuran file maks. 2 MB!', true); input.value = ''; return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    tempLogo = { b64: e.target.result, name: file.name };
+    refreshLogoUI(); refreshSettingsPreview();
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+function removeLogo() {
+  tempLogo = { b64: null, name: '' };
+  refreshLogoUI(); refreshSettingsPreview();
+}
+
+function saveSettings() {
+  const name = document.getElementById('sName').value.trim();
+  const sub  = document.getElementById('sSub').value.trim();
+  if (!name) { showToast('Nama tidak boleh kosong!', true); return; }
+  cfg.name     = name;
+  cfg.sub      = sub || 'Sistem Pencatatan Keuangan';
+  cfg.logoB64  = tempLogo.b64;
+  cfg.logoName = tempLogo.name;
+  persistSettings(); applySettings();
+  closeOverlay('settingsOverlay');
+  showToast('Pengaturan berhasil disimpan ✓');
+}
+
+// drag-over visual feedback
+const uploadArea = document.getElementById('uploadArea');
+uploadArea.addEventListener('dragover',  e => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
+uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag-over'));
+uploadArea.addEventListener('drop', e => {
+  e.preventDefault(); uploadArea.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (!file || !file.type.startsWith('image/')) { showToast('Hanya file gambar yang diizinkan!', true); return; }
+  handleLogoFile({ files: [file], value: '' });
+});
+
+// ── FORMAT HELPERS ─────────────────────────────────────────────
+function fRp(n) {
+  if (!n && n !== 0) return '';
+  return 'Rp\u00A0' + n.toLocaleString('id-ID');
+}
+function fDate(s) {
+  if (!s) return '';
+  const [y,m,d] = s.split('-');
+  const mo = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  return `${parseInt(d)} ${mo[parseInt(m)-1]} ${y}`;
+}
+function todayISO() { return new Date().toISOString().split('T')[0]; }
+function parseAmt(s) { return parseInt(s.replace(/[^0-9]/g,'')) || 0; }
+function formatAmtInput(el) {
+  const n = parseAmt(el.value);
+  el.value = n ? n.toLocaleString('id-ID') : '';
+}
+
+// ── SORTED + BALANCE ───────────────────────────────────────────
+function getSortedRows() {
+  const sorted = [...transactions].sort((a,b) =>
+    a.date !== b.date ? a.date.localeCompare(b.date) : a.id - b.id
+  );
+  let bal = 0;
+  return sorted.map(t => { bal += t.pemasukan - t.pengeluaran; return { ...t, balance: bal }; });
+}
+
+// ── RENDER ─────────────────────────────────────────────────────
+function renderAll() { renderCards(); renderTable(); }
+
+function renderCards() {
+  const m = transactions.reduce((s,t) => s + t.pemasukan,  0);
+  const k = transactions.reduce((s,t) => s + t.pengeluaran,0);
+  document.getElementById('cardMasuk').textContent  = fRp(m);
+  document.getElementById('cardKeluar').textContent = fRp(k);
+  document.getElementById('cardSaldo').textContent  = fRp(m - k);
+}
+
+function renderTable() {
+  const rows     = getSortedRows();
+  const q        = document.getElementById('searchInput').value.trim().toLowerCase();
+  const filtered = q
+    ? rows.filter(r => r.keterangan.toLowerCase().includes(q) || fDate(r.date).toLowerCase().includes(q))
+    : rows;
+
+  const tbody = document.getElementById('tableBody');
+  const tfoot = document.getElementById('tableFoot');
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="7">
+      ${transactions.length === 0
+        ? '☁️&nbsp; Belum ada transaksi. Klik <strong>+ Tambah</strong> untuk mulai.'
+        : '🔍&nbsp; Tidak ada transaksi yang cocok.'}
+    </td></tr>`;
+    tfoot.innerHTML = '';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map((r,i) => `
+    <tr>
+      <td class="c">${i+1}</td>
+      <td class="c">${fDate(r.date)}</td>
+      <td class="l">${escHtml(r.keterangan)}</td>
+      <td class="r keluar">${r.pengeluaran > 0 ? fRp(r.pengeluaran) : ''}</td>
+      <td class="r masuk">${r.pemasukan  > 0 ? fRp(r.pemasukan)  : ''}</td>
+      <td class="r saldo${r.balance < 0 ? ' minus':''}">${fRp(r.balance)}</td>
+      <td class="c">
+        <button class="btn-icon" title="Edit"  onclick="openEdit(${r.id})">✏️</button>
+        <button class="btn-icon" title="Hapus" onclick="openDelete(${r.id})">🗑️</button>
+      </td>
+    </tr>`).join('');
+
+  const m = transactions.reduce((s,t) => s + t.pemasukan,  0);
+  const k = transactions.reduce((s,t) => s + t.pengeluaran,0);
+  tfoot.innerHTML = `
+    <tr>
+      <td colspan="3" class="total-label">TOTAL KESELURUHAN</td>
+      <td class="total-keluar">${fRp(k)}</td>
+      <td class="total-masuk">${fRp(m)}</td>
+      <td class="total-saldo">${fRp(m-k)}</td>
+      <td></td>
+    </tr>`;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── FORM ───────────────────────────────────────────────────────
+function openForm() {
+  editId = null;
+  document.getElementById('fDate').value = todayISO();
+  document.getElementById('fKet').value  = '';
+  document.getElementById('fAmt').value  = '';
+  setType('pemasukan');
+  document.getElementById('formTitle').textContent = 'Tambah Transaksi Baru';
+  document.querySelector('#formOverlay .btn-save').textContent = 'Tambah Transaksi';
+  document.getElementById('formOverlay').classList.add('show');
+  setTimeout(() => document.getElementById('fKet').focus(), 100);
+}
+
+function openEdit(id) {
+  const t = transactions.find(x => x.id === id);
+  if (!t) return;
+  editId = id;
+  document.getElementById('fDate').value = t.date;
+  document.getElementById('fKet').value  = t.keterangan;
+  const amt = t.pengeluaran > 0 ? t.pengeluaran : t.pemasukan;
+  document.getElementById('fAmt').value  = amt ? amt.toLocaleString('id-ID') : '';
+  setType(t.pengeluaran > 0 ? 'pengeluaran' : 'pemasukan');
+  document.getElementById('formTitle').textContent = 'Edit Transaksi';
+  document.querySelector('#formOverlay .btn-save').textContent = 'Simpan Perubahan';
+  document.getElementById('formOverlay').classList.add('show');
+}
+
+function closeForm() {
+  document.getElementById('formOverlay').classList.remove('show');
+  editId = null;
+}
+
+function setType(type) {
+  formType = type;
+  document.getElementById('btnMasuk').className  = 'type-btn' + (type==='pemasukan'  ? ' active-masuk'  : '');
+  document.getElementById('btnKeluar').className = 'type-btn' + (type==='pengeluaran' ? ' active-keluar' : '');
+}
+
+function submitForm() {
+  const date = document.getElementById('fDate').value;
+  const ket  = document.getElementById('fKet').value.trim();
+  const amt  = parseAmt(document.getElementById('fAmt').value);
+  if (!date) { showToast('Pilih tanggal!', true); return; }
+  if (!ket)  { showToast('Keterangan tidak boleh kosong!', true); return; }
+  if (!amt)  { showToast('Nominal harus lebih dari 0!', true); return; }
+
+  if (editId) {
+    transactions = transactions.map(t => t.id === editId
+      ? { ...t, date, keterangan: ket,
+          pemasukan:   formType==='pemasukan'   ? amt : 0,
+          pengeluaran: formType==='pengeluaran' ? amt : 0 }
+      : t);
+    showToast('Transaksi berhasil diperbarui ✓');
+  } else {
+    transactions.push({ id: Date.now(), date, keterangan: ket,
+      pemasukan:   formType==='pemasukan'   ? amt : 0,
+      pengeluaran: formType==='pengeluaran' ? amt : 0 });
+    showToast('Transaksi berhasil ditambahkan ✓');
+  }
+  saveData(); renderAll(); closeForm();
+}
+
+// ── DELETE ─────────────────────────────────────────────────────
+function openDelete(id) { deleteId = id; document.getElementById('delOverlay').classList.add('show'); }
+function confirmDelete() {
+  transactions = transactions.filter(t => t.id !== deleteId);
+  deleteId = null;
+  saveData(); renderAll();
+  closeOverlay('delOverlay');
+  showToast('Transaksi dihapus', true);
+}
+
+// ── OVERLAYS ───────────────────────────────────────────────────
+function closeOverlay(id) { document.getElementById(id).classList.remove('show'); }
+function overlayClose(e, id) { if (e.target.classList.contains('overlay')) closeOverlay(id); }
+
+// ── EXPORT EXCEL ───────────────────────────────────────────────
+function exportExcel() {
+  if (transactions.length === 0) { showToast('Belum ada data untuk diekspor!', true); return; }
+  const rows = getSortedRows();
+  const m    = transactions.reduce((s,t) => s + t.pemasukan,  0);
+  const k    = transactions.reduce((s,t) => s + t.pengeluaran,0);
+
+  const wsData = [
+    ['Laporan Keuangan — ' + cfg.name],
+    [],
+    ['No','Tanggal','Keterangan','Pengeluaran','Pemasukan','Balance'],
+    ...rows.map((r,i) => [
+      i+1, fDate(r.date), r.keterangan,
+      r.pengeluaran || '', r.pemasukan || '', r.balance
+    ]),
+    [],
+    ['','','TOTAL', k, m, m-k],
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  ws['!merges'] = [{ s:{r:0,c:0}, e:{r:0,c:5} }];
+  ws['!cols'] = [{wch:5},{wch:15},{wch:42},{wch:20},{wch:20},{wch:20}];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Laporan Keuangan');
+  const safeName = cfg.name.replace(/[^a-zA-Z0-9_\- ]/g,'').trim().replace(/ /g,'_');
+  XLSX.writeFile(wb, `Laporan_Keuangan_${safeName}.xlsx`);
+  showToast('File Excel berhasil diunduh ✓');
+}
+
+// ── EXPORT PDF ─────────────────────────────────────────────────
+function exportPDF() {
+  if (transactions.length === 0) { showToast('Belum ada data untuk diekspor!', true); return; }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  const rows   = getSortedRows();
+  const m      = transactions.reduce((s,t) => s + t.pemasukan,  0);
+  const k      = transactions.reduce((s,t) => s + t.pengeluaran,0);
+  const saldo  = m - k;
+  const W      = doc.internal.pageSize.getWidth();
+  const now    = new Date();
+  const tanggalCetak = fDate(now.toISOString().split('T')[0]);
+
+  // ── Header band ──
+  doc.setFillColor(26, 74, 46);
+  doc.rect(0, 0, W, 36, 'F');
+
+  // Gold accent line
+  doc.setFillColor(201, 168, 76);
+  doc.rect(0, 36, W, 2, 'F');
+
+  // App name
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.text('Umee!Catat', 14, 14);
+
+  // Org name / sub
+  doc.setFontSize(10);
+  doc.setTextColor(240, 208, 128);
+  doc.text(cfg.name || 'Laporan Keuangan', 14, 22);
+  doc.setFontSize(8);
+  doc.setTextColor(180, 220, 195);
+  doc.text(cfg.sub || 'Sistem Pencatatan Keuangan', 14, 29);
+
+  // Tanggal cetak (top right)
+  doc.setTextColor(200, 240, 215);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.text('Dicetak: ' + tanggalCetak, W - 14, 22, { align: 'right' });
+
+  // ── Summary cards ──
+  const cy = 44;
+  const cardW = (W - 28 - 8) / 3;
+
+  function drawCard(x, y, w, label, value, bgR, bgG, bgB, valR, valG, valB) {
+    doc.setFillColor(bgR, bgG, bgB);
+    doc.roundedRect(x, y, w, 20, 2, 2, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(6.5);
+    doc.setTextColor(80, 80, 80);
+    doc.text(label, x + w/2, y + 6.5, { align: 'center' });
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(valR, valG, valB);
+    doc.text(value, x + w/2, y + 14.5, { align: 'center' });
+  }
+
+  drawCard(14,           cy, cardW, 'TOTAL PEMASUKAN', fRp(m).replace('\u00A0',' '),
+           216, 243, 226,  26, 106, 64);
+  drawCard(14 + cardW + 4, cy, cardW, 'SALDO SAAT INI',  fRp(saldo).replace('\u00A0',' '),
+           saldo >= 0 ? 26 : 255, saldo >= 0 ? 74 : 235, saldo >= 0 ? 78 : 235,
+           255, 255, 255);
+  drawCard(14 + (cardW+4)*2, cy, cardW, 'TOTAL PENGELUARAN', fRp(k).replace('\u00A0',' '),
+           253, 232, 232,  192, 57, 43);
+
+  // ── Table ──
+  const tableTop = cy + 26;
+
+  const tableRows = rows.map((r, i) => [
+    i + 1,
+    fDate(r.date),
+    r.keterangan,
+    r.pengeluaran > 0 ? fRp(r.pengeluaran).replace('\u00A0',' ') : '',
+    r.pemasukan   > 0 ? fRp(r.pemasukan).replace('\u00A0',' ')   : '',
+    fRp(r.balance).replace('\u00A0',' ')
+  ]);
+
+  doc.autoTable({
+    startY: tableTop,
+    head: [['No', 'Tanggal', 'Keterangan', 'Pengeluaran', 'Pemasukan', 'Balance']],
+    body: tableRows,
+    foot: [['', '', 'TOTAL KESELURUHAN',
+      fRp(k).replace('\u00A0',' '),
+      fRp(m).replace('\u00A0',' '),
+      fRp(saldo).replace('\u00A0',' ')]],
+    theme: 'grid',
+    styles: { font: 'helvetica', fontSize: 8, cellPadding: 2.5, valign: 'middle' },
+    headStyles: {
+      fillColor: [45, 106, 79], textColor: 255,
+      fontStyle: 'bold', fontSize: 7.5, halign: 'center'
+    },
+    footStyles: {
+      fillColor: [26, 74, 46], textColor: 255,
+      fontStyle: 'bold', fontSize: 8
+    },
+    columnStyles: {
+      0: { halign: 'center', cellWidth: 10 },
+      1: { halign: 'center', cellWidth: 26 },
+      2: { halign: 'left' },
+      3: { halign: 'right', cellWidth: 36, textColor: [192, 57, 43] },
+      4: { halign: 'right', cellWidth: 36, textColor: [26, 106, 64] },
+      5: { halign: 'right', cellWidth: 36, fontStyle: 'bold', textColor: [26, 58, 92] }
+    },
+    alternateRowStyles: { fillColor: [246, 252, 248] },
+    didParseCell: (data) => {
+      // Footer cells: reset textColor overrides for proper contrast
+      if (data.section === 'foot') {
+        data.cell.styles.textColor = 255;
+      }
+    },
+    margin: { left: 14, right: 14 }
+  });
+
+  // ── Footer note on last page ──
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    const py = doc.internal.pageSize.getHeight() - 8;
+    doc.setFillColor(26, 74, 46);
+    doc.rect(0, py - 4, W, 12, 'F');
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(180, 220, 195);
+    doc.text('Umee!Catat · ' + (cfg.name || '') + ' · Halaman ' + i + ' / ' + pageCount, W / 2, py + 2, { align: 'center' });
+  }
+
+  // ── Save / share ──
+  const safeName = (cfg.name || 'Laporan').replace(/[^a-zA-Z0-9_\- ]/g,'').trim().replace(/ /g,'_');
+  const fileName = `Laporan_Keuangan_${safeName}.pdf`;
+
+  // Try native share (mobile) first; fallback to download
+  doc.output('blob') && (() => {
+    const pdfBlob = doc.output('blob');
+    if (navigator.canShare && navigator.canShare({ files: [new File([pdfBlob], fileName, { type: 'application/pdf' })] })) {
+      const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+      navigator.share({ files: [file], title: 'Laporan Keuangan ' + cfg.name, text: 'Laporan keuangan dari Umee!Catat' })
+        .then(() => showToast('PDF berhasil dibagikan ✓'))
+        .catch(() => { doc.save(fileName); showToast('PDF berhasil diunduh ✓'); });
+    } else {
+      doc.save(fileName);
+      showToast('PDF berhasil diunduh ✓');
+    }
+  })();
+}
+
+// ── SHARE WA ───────────────────────────────────────────────────
+function shareWA() {
+  if (transactions.length === 0) { showToast('Belum ada data untuk dibagikan!', true); return; }
+  const rows   = getSortedRows();
+  const last10 = rows.slice(-10);
+  const m = transactions.reduce((s,t) => s + t.pemasukan,  0);
+  const k = transactions.reduce((s,t) => s + t.pengeluaran,0);
+
+  const lines = [
+    `*Laporan Keuangan — ${cfg.name}*`,
+    `_${last10.length === rows.length ? 'Semua' : '10'} Transaksi Terakhir_`,
+    '',
+    ...last10.map((r,i) =>
+      `${i+1}. *${fDate(r.date)}*\n` +
+      `   ${r.keterangan}\n` +
+      `   ${r.pemasukan > 0 ? '✅ Masuk: ' + fRp(r.pemasukan) : '❌ Keluar: ' + fRp(r.pengeluaran)}\n` +
+      `   Saldo: ${fRp(r.balance)}`
+    ),
+    '',
+    `*Saldo Akhir: ${fRp(m-k)}*`,
+    '',
+    `_Dibagikan via Umee!Catat v1.1_`,
+  ];
+
+  window.open('https://wa.me/?text=' + encodeURIComponent(lines.join('\n')), '_blank');
+}
+
+// ── TOAST ──────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, isErr=false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show' + (isErr ? ' err' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = ''; }, 3000);
+}
+
+// ── KEYBOARD ──────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeForm();
+    closeOverlay('delOverlay');
+    closeOverlay('settingsOverlay');
+  }
+  if (e.key === 'Enter' && document.getElementById('formOverlay').classList.contains('show')) {
+    submitForm();
+  }
+});
+
+// ── INIT ───────────────────────────────────────────────────────
+loadData();
+</script>
+</body>
+</html>
